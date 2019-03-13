@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
+from sklearn.model_selection import train_test_split
 
 def create_pick_ban_1_team(data, patch_range_low, patch_range_high):
     """
@@ -507,3 +508,94 @@ def create_pick_ban_both_teams(data, patch_range_low, patch_range_high):
 
                 data_df = data_df.append(row, ignore_index=True)
     return data_df
+
+def create_shuffle_vector(data, patch_range_low, patch_range_high, random_seed, test_size):
+    """
+    takes in data and range of patch numbers and returns 
+    1st dataframe with both teams' picks, and bans
+    2nd datafram with if the team that had first pick won
+    """
+    hero_df = pd.DataFrame()
+    win_df = pd.DataFrame()
+    
+    for i in data.index: 
+        patch = data.at[i, 'patch']
+        game_mode = data.at[i, 'game_mode']
+        if patch >= patch_range_low and patch <= patch_range_high and game_mode == 2: 
+            length = len(data.at[i, 'picks_bans'])
+            if  length == 22:
+                ban1 = data.at[i, "picks_bans"][0]["hero_id"]
+                ban6 = data.at[i, "picks_bans"][1]["hero_id"]
+                ban2 = data.at[i, "picks_bans"][2]["hero_id"]
+                ban7 = data.at[i, "picks_bans"][3]["hero_id"]
+                ban3 = data.at[i, "picks_bans"][4]["hero_id"]
+                ban8 = data.at[i, "picks_bans"][5]["hero_id"]
+
+                pick1 = data.at[i, "picks_bans"][6]["hero_id"]
+                pick6 = data.at[i, "picks_bans"][7]["hero_id"]
+                pick7 = data.at[i, "picks_bans"][8]["hero_id"]
+                pick2 = data.at[i, "picks_bans"][9]["hero_id"]
+
+                ban9 = data.at[i, "picks_bans"][10]["hero_id"]
+                ban4 = data.at[i, "picks_bans"][11]["hero_id"]
+                ban10 = data.at[i, "picks_bans"][12]["hero_id"]
+                ban5 = data.at[i, "picks_bans"][13]["hero_id"]
+
+                pick8 = data.at[i, "picks_bans"][14]["hero_id"]
+                pick3 = data.at[i, "picks_bans"][15]["hero_id"]
+                pick9 = data.at[i, "picks_bans"][16]["hero_id"]
+                pick4 = data.at[i, "picks_bans"][17]["hero_id"]  
+
+                ban11 = data.at[i, "picks_bans"][18]["hero_id"]
+                ban6 = data.at[i, "picks_bans"][19]["hero_id"]
+
+                pick5 = data.at[i, "picks_bans"][20]["hero_id"]
+                pick10 = data.at[i, "picks_bans"][21]["hero_id"] 
+
+                radiantWin = data.at[i, "radiant_win"]
+                
+                team1 = pd.Series({"pick_1": pick1, "pick_2": pick2, "pick_3": pick3, "pick_4": pick4, "pick_5": pick5})
+                player1_hero = data.at[i, "players"][0]["hero_id"]
+                player1_first_pick = False
+                player1_radiant = data.at[i, "players"][0]["isRadiant"]
+                picks_bans = {}
+                
+                firstWin = data.at[i, 'radiant_win']
+                
+                hero_vector = np.zeros((4, 121))
+                
+                for hero in team1:
+                    if hero == player1_hero:
+                        player1_first_pick = True
+                if not player1_first_pick:
+                    firstWin = not data.at[i, 'radiant_win']
+
+                    
+                picks_bans = [pick1, pick2, pick3, pick4, pick5,
+                              ban1, ban2, ban3, ban4, ban5, ban6,
+                              pick6, pick7, pick8, pick9, pick10,
+                              ban6, ban7, ban8, ban9,  ban10, ban11] 
+                
+                pick_b = True
+                for v_row in hero_vector:
+                    for pb in picks_bans:
+                        if pick_b:
+                            for i in np.arange(5):
+                                v_row[pb] = 1;
+                            pick_b = False
+                        else:
+                            for i in np.arange(6):
+                                v_row[pb] = 1;
+                            pick_b = True
+                
+                try:
+                    math.isnan(int(firstWin))
+                except TypeError:
+                    continue
+                
+                hero_vector = np.concatenate((hero_vector[0], hero_vector[1], hero_vector[2], hero_vector[3]), axis=None)
+                hero_df = hero_df.append(pd.Series(hero_vector), ignore_index=True)
+                
+                win_df = win_df.append(pd.Series(firstWin), ignore_index=True)
+
+    return train_test_split(hero_df, win_df, test_size=test_size, random_state=random_seed)
